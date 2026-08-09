@@ -189,12 +189,33 @@
   </main>
 
   <script>
-    function loadEntries(){
+    // CONFIG: replace with your deployed Apps Script web app URL when ready
+    const SHEET_ENDPOINT = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
+    async function loadEntries(){
+      // Try to fetch from central sheet endpoint first
+      if(SHEET_ENDPOINT && SHEET_ENDPOINT.startsWith('https')){
+        try{
+          const res = await fetch(SHEET_ENDPOINT);
+          if(!res.ok) throw new Error('Fetch failed: ' + res.status);
+          const rows = await res.json();
+          // Map sheet rows to expected shape
+          return rows.map(r => ({
+            name: r['Full Name'] || r['Full name'] || r['FullName'] || r['full name'] || '',
+            email: r['Email Address'] || r['Email'] || r['email'] || '',
+            phone: r['Phone Number'] || r['Phone'] || r['phone'] || '',
+            date: r['Date Registered'] || r['Date'] || (r['Timestamp'] ? new Date(r['Timestamp']).toISOString().slice(0,10) : '')
+          }));
+        }catch(err){
+          console.warn('Could not load sheet entries, falling back to localStorage', err);
+        }
+      }
+      // fallback to localStorage
       return JSON.parse(localStorage.getItem('beyondRegistrations') || '[]');
     }
 
-    function render(){
-      const entries = loadEntries();
+    async function render(){
+      const entries = await loadEntries();
       const body = document.getElementById('tableBody');
       const empty = document.getElementById('emptyState');
       const count = document.getElementById('count');
@@ -215,8 +236,8 @@
       });
     }
 
-    document.getElementById('downloadBtn').addEventListener('click', function(){
-      const entries = loadEntries();
+    document.getElementById('downloadBtn').addEventListener('click', async function(){
+      const entries = await loadEntries();
       if(entries.length === 0){
         alert('There are no registrations to download yet.');
         return;
@@ -237,13 +258,15 @@
       XLSX.writeFile(workbook, 'beyond-registrations.xlsx');
     });
 
-    document.getElementById('clearBtn').addEventListener('click', function(){
+    document.getElementById('clearBtn').addEventListener('click', async function(){
       if(confirm('This will permanently remove all stored registrations from this browser. Continue?')){
         localStorage.removeItem('beyondRegistrations');
-        render();
+        // Note: this does not remove entries from the central Google Sheet
+        await render();
       }
     });
 
+    // initial render
     render();
   </script>
 
