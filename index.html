@@ -169,6 +169,14 @@
     nav{ justify-content:center; }
     .btn{ padding:12px 22px; font-size:0.68rem; }
   }
+
+  /* Remove visual link styling so the admin link is hidden in the footer text */
+  .admin-hidden-link{
+    color:inherit;
+    text-decoration:none;
+    border-bottom:none;
+    cursor:default;
+  }
 </style>
 </head>
 <body>
@@ -190,10 +198,29 @@
     </main>
 
     <footer>
-      &copy; By Serena Govind 2026
+      &copy; By <a href="admin.html" id="admin-link" class="admin-hidden-link" aria-label="Admin area (password protected)">Serena Govind</a> 2026
     </footer>
 
   </div>
+
+  <script>
+    // Client-side password check for a hidden admin link.
+    // WARNING: This is purely client-side and not secure. Anyone can view the password by inspecting the page source.
+    (function(){
+      var adminLink = document.getElementById('admin-link');
+      if(!adminLink) return;
+      adminLink.addEventListener('click', function(e){
+        e.preventDefault();
+        var pwd = prompt('Enter admin password:');
+        // The password is intentionally stored client-side per request.
+        if(pwd === 'AccessOnlyForBellaHadid'){
+          window.location.href = adminLink.getAttribute('href');
+        } else if(pwd !== null){
+          alert('Incorrect password.');
+        }
+      });
+    })();
+  </script>
 
 </body>
 </html>
