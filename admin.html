@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registrations — Beyond</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink: #2f3a44;
+    --cream: #f7f1e2;
+    --line: rgba(247,241,226,0.55);
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+
+  body{
+    font-family:'Jost', sans-serif;
+    color:var(--ink);
+    background:#e9e4d6;
+    min-height:100vh;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+    padding:36px 48px;
+    flex-wrap:wrap;
+    background:#3a4552;
+    color:var(--cream);
+  }
+
+  .logo{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:500;
+    font-size:1.6rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    text-decoration:none;
+    color:var(--cream);
+  }
+
+  header a.back{
+    font-size:0.72rem;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--cream);
+    text-decoration:none;
+    opacity:0.85;
+    border-bottom:1px solid var(--line);
+    padding-bottom:2px;
+  }
+
+  main{
+    max-width:900px;
+    margin:0 auto;
+    padding:48px 24px 80px;
+  }
+
+  h1{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:400;
+    font-style:italic;
+    font-size:2.2rem;
+    margin-bottom:8px;
+  }
+
+  .sub{
+    font-size:0.9rem;
+    opacity:0.75;
+    margin-bottom:32px;
+    max-width:60ch;
+  }
+
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:20px;
+  }
+
+  .count{
+    font-size:0.72rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    opacity:0.65;
+  }
+
+  .btn{
+    display:inline-block;
+    font-family:'Jost', sans-serif;
+    font-size:0.72rem;
+    font-weight:500;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    text-decoration:none;
+    color:var(--cream);
+    background:#3a4552;
+    border:1px solid #3a4552;
+    border-radius:2px;
+    padding:12px 26px;
+    cursor:pointer;
+    transition:background 0.3s ease, color 0.3s ease;
+  }
+
+  .btn:hover{
+    background:transparent;
+    color:#3a4552;
+  }
+
+  .btn.secondary{
+    background:transparent;
+    color:#3a4552;
+  }
+
+  .btn.secondary:hover{
+    background:#3a4552;
+    color:var(--cream);
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+  }
+
+  th, td{
+    text-align:left;
+    padding:12px 14px;
+    font-size:0.85rem;
+    border-bottom:1px solid #ddd6c4;
+  }
+
+  th{
+    font-size:0.68rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    opacity:0.6;
+    font-weight:500;
+  }
+
+  .empty{
+    padding:40px 14px;
+    text-align:center;
+    opacity:0.6;
+    font-size:0.9rem;
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="logo">Luxury Indulge</a>
+    <a href="index.html" class="back">&larr; Back to Home</a>
+  </header>
+
+  <main>
+    <h1>Registrations</h1>
+    <p class="sub">Entries submitted through the registration form on this browser. Download them as an Excel file to build your emailing list, then clear them once they're saved elsewhere.</p>
+
+    <div class="toolbar">
+      <span class="count" id="count">0 entries</span>
+      <div>
+        <button class="btn" id="downloadBtn">Download Excel</button>
+        <button class="btn secondary" id="clearBtn">Clear All</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Full Name</th>
+          <th>Email Address</th>
+          <th>Phone Number</th>
+          <th>Date Registered</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty" id="emptyState" style="display:none;">No registrations yet.</div>
+  </main>
+
+  <script>
+    function loadEntries(){
+      return JSON.parse(localStorage.getItem('beyondRegistrations') || '[]');
+    }
+
+    function render(){
+      const entries = loadEntries();
+      const body = document.getElementById('tableBody');
+      const empty = document.getElementById('emptyState');
+      const count = document.getElementById('count');
+
+      body.innerHTML = '';
+      count.textContent = entries.length + (entries.length === 1 ? ' entry' : ' entries');
+
+      if(entries.length === 0){
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      entries.forEach(e => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${e.name}</td><td>${e.email}</td><td>${e.phone}</td><td>${e.date}</td>`;
+        body.appendChild(row);
+      });
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', function(){
+      const entries = loadEntries();
+      if(entries.length === 0){
+        alert('There are no registrations to download yet.');
+        return;
+      }
+
+      const rows = entries.map(e => ({
+        'Full Name': e.name,
+        'Email Address': e.email,
+        'Phone Number': e.phone,
+        'Date Registered': e.date
+      }));
+
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      sheet['!cols'] = [{wch: 24}, {wch: 30}, {wch: 18}, {wch: 16}];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, 'Registrations');
+      XLSX.writeFile(workbook, 'beyond-registrations.xlsx');
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', function(){
+      if(confirm('This will permanently remove all stored registrations from this browser. Continue?')){
+        localStorage.removeItem('beyondRegistrations');
+        render();
+      }
+    });
+
+    render();
+  </script>
+
+</body>
+</html>
