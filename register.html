@@ -269,12 +269,16 @@
   </div>
 
   <script>
+    // CONFIG: replace with the URL of your deployed Apps Script web app (see README/instructions in the repo)
+    const SHEET_ENDPOINT = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
     const form = document.getElementById('registerForm');
     const note = document.getElementById('formNote');
     const title = document.getElementById('formTitle');
     const intro = document.getElementById('formIntro');
     const confirmation = document.getElementById('confirmation');
 
+    // Save locally and POST to the central Google Sheet endpoint (if configured)
     form.addEventListener('submit', function(e){
       e.preventDefault();
 
@@ -285,9 +289,24 @@
         date: new Date().toISOString().slice(0, 10)
       };
 
+      // Local storage fallback
       const stored = JSON.parse(localStorage.getItem('beyondRegistrations') || '[]');
       stored.push(entry);
       localStorage.setItem('beyondRegistrations', JSON.stringify(stored));
+
+      // Try to POST to central sheet (if endpoint configured)
+      if(SHEET_ENDPOINT && SHEET_ENDPOINT.startsWith('https')){
+        fetch(SHEET_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry)
+        }).then(res => res.json()).then(data => {
+          // optionally show success from server
+          console.log('Sheet response:', data);
+        }).catch(err => {
+          console.warn('Could not post to sheet endpoint:', err);
+        });
+      }
 
       title.style.display = 'none';
       intro.style.display = 'none';
