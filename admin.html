@@ -189,28 +189,94 @@
   </main>
 
   <script>
-    // CONFIG: replace with your deployed Apps Script web app URL when ready
-    const SHEET_ENDPOINT = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+    // Published CSV URL you gave (used to load sheet responses)
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS2I119xZqfqS4pjMvK1bE4ye8uRFSoe5GbD33mulX3Y9DbsqgVViugiuK-l_9AR-wZqqTu5JcKN4At/pub?gid=1122100854&single=true&output=csv';
+
+    // Optional Apps Script endpoint fallback (leave blank unless you have one)
+    const SHEET_ENDPOINT = '';
+
+    // Parse a CSV string into an array of rows; handles quoted fields reasonably
+    function parseCSV(text){
+      const rows = [];
+      let cur = [], field = '', inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQuotes) {
+          if (ch === '"') {
+            if (text[i+1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+          } else { field += ch; }
+        } else {
+          if (ch === '"') { inQuotes = true; }
+          else if (ch === ',') { cur.push(field); field = ''; }
+          else if (ch === '\r') { /* ignore */ }
+          else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+          else { field += ch; }
+        }
+      }
+      if (field !== '' || cur.length) cur.push(field);
+      if (cur.length) rows.push(cur);
+      return rows;
+    }
+
+    // Map CSV rows (first row = header) to the simple objects expected by the page
+    function rowsToEntries(rows){
+      if (!rows || rows.length < 2) return [];
+      const headers = rows[0].map(h => (h || '').replace(/^"|"$/g,'').trim());
+      const entries = [];
+      for (let r = 1; r < rows.length; r++){
+        const row = rows[r];
+        const obj = {};
+        for (let c = 0; c < headers.length; c++){
+          obj[headers[c]] = (row[c] || '').replace(/^"|"$/g,'').trim();
+        }
+        // Map common header names to expected keys:
+        entries.push({
+          name: obj['Full Name'] || obj['Full name'] || obj['Name'] || obj['name'] || '',
+          email: obj['Email Address'] || obj['Email'] || obj['email'] || '',
+          phone: obj['Phone Number'] || obj['Phone'] || obj['phone'] || '',
+          date: obj['Date Registered'] || obj['Date'] || obj['Timestamp'] || ''
+        });
+      }
+      return entries;
+    }
 
     async function loadEntries(){
-      // Try to fetch from central sheet endpoint first
-      if(SHEET_ENDPOINT && SHEET_ENDPOINT.startsWith('https')){
+      // 1) Try the published CSV first (your provided link)
+      if (CSV_URL){
+        try {
+          const r = await fetch(CSV_URL + '&_=' + Date.now()); // cache-buster
+          if (r.ok){
+            const txt = await r.text();
+            const rows = parseCSV(txt);
+            const entries = rowsToEntries(rows);
+            if (entries.length) return entries;
+            // if CSV exists but empty, fallthrough to next options
+          } else {
+            console.warn('CSV fetch failed', r.status);
+          }
+        } catch (err) {
+          console.warn('Could not fetch CSV, falling back', err);
+        }
+      }
+
+      // 2) Try Apps Script JSON endpoint if provided (keeps existing behavior)
+      if (SHEET_ENDPOINT && SHEET_ENDPOINT.startsWith('https')){
         try{
           const res = await fetch(SHEET_ENDPOINT);
-          if(!res.ok) throw new Error('Fetch failed: ' + res.status);
+          if (!res.ok) throw new Error('Fetch failed: ' + res.status);
           const rows = await res.json();
-          // Map sheet rows to expected shape
           return rows.map(r => ({
-            name: r['Full Name'] || r['Full name'] || r['FullName'] || r['full name'] || '',
+            name: r['Full Name'] || r['Full name'] || r['FullName'] || r['full name'] || r['Name'] || '',
             email: r['Email Address'] || r['Email'] || r['email'] || '',
             phone: r['Phone Number'] || r['Phone'] || r['phone'] || '',
             date: r['Date Registered'] || r['Date'] || (r['Timestamp'] ? new Date(r['Timestamp']).toISOString().slice(0,10) : '')
           }));
         }catch(err){
-          console.warn('Could not load sheet entries, falling back to localStorage', err);
+          console.warn('Could not load sheet entries from endpoint, falling back to localStorage', err);
         }
       }
-      // fallback to localStorage
+
+      // 3) Fallback to localStorage (existing local registrations)
       return JSON.parse(localStorage.getItem('beyondRegistrations') || '[]');
     }
 
