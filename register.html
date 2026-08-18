@@ -270,7 +270,7 @@
 
   <script>
     // CONFIG: replace with the URL of your deployed Apps Script web app (see README/instructions in the repo)
-    const SHEET_ENDPOINT = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+    const SHEET_ENDPOINT = '';
 
     const form = document.getElementById('registerForm');
     const note = document.getElementById('formNote');
@@ -278,36 +278,16 @@
     const intro = document.getElementById('formIntro');
     const confirmation = document.getElementById('confirmation');
 
-    // Save locally and POST to the central Google Sheet endpoint (if configured)
+    // Instead of posting to apps script, open the Google Form on submit (mobile-friendly)
     form.addEventListener('submit', function(e){
       e.preventDefault();
 
-      const entry = {
-        name: document.getElementById('name').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        date: new Date().toISOString().slice(0, 10)
-      };
+      // Build the Google Form URL — we will open the form so users submit directly there
+      const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLScfQHGAzp7ryn31hnQci-dmjComKN6ZjI84RXgJ3s9elSnB5w/viewform?usp=header';
+      // Open in a new tab (mobile browsers open native view)
+      window.open(formUrl, '_blank', 'noopener');
 
-      // Local storage fallback
-      const stored = JSON.parse(localStorage.getItem('beyondRegistrations') || '[]');
-      stored.push(entry);
-      localStorage.setItem('beyondRegistrations', JSON.stringify(stored));
-
-      // Try to POST to central sheet (if endpoint configured)
-      if(SHEET_ENDPOINT && SHEET_ENDPOINT.startsWith('https')){
-        fetch(SHEET_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entry)
-        }).then(res => res.json()).then(data => {
-          // optionally show success from server
-          console.log('Sheet response:', data);
-        }).catch(err => {
-          console.warn('Could not post to sheet endpoint:', err);
-        });
-      }
-
+      // Show local confirmation to the user
       title.style.display = 'none';
       intro.style.display = 'none';
       form.classList.add('hide');
